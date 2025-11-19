@@ -1,44 +1,48 @@
-# 🎬 Movie Quality Prediction (IMDb Dataset)
+# 🎬 Good Movie? (IMDb Dataset)
+App is currently deployed and you can acces here: https://good-movie.onrender.com/docs#/ <br>IMPORTANT: App also needs some time to wake up so be patient :) 
 ## Table of Contents
 - **Overview**
+- **Project layout**
 - **Dataset**
 - **Features**
 - **Modeling & Evaluation**
 - **Deployment**
 - **Quickstart**
-- **Contributing**
 
 ## Overview
-Predict whether a movie is "good" or "bad" from tabular IMDb metadata. The target label is `is_good` (1 if rating >= 7, else 0).
+This project predicts whether a movie will be well-received (good) based on metadata available on IMDb, such as budget, genre, and reviews.
 
 **Problem type:** Binary classification
 
+## Project layout
 
+- `src/` — Python modules
+  - `preprocessing.py` — preprocessing helpers
+  - `train.py` — training script (saves `models/model.bin`)
+  - `predict.py` — FastAPI prediction service
+- `data/` — raw and processed CSVs
+- `models/` — trained models
+- `notebooks/` — EDA and preprocessing exploration
+- `pyproject.toml` / `requirements.txt` — dependencies
 
 ## Dataset
-- **Source:** IMDb (tabular metadata)
-- **Typical fields:** `title`, `genre`, `director`, `cast`, `runtime`, `budget`, `box_office`, `release_year`, `language`, `country`, `rating`, etc.
+- **Source:** IMDb (tabular metadata).
+- **Downloaded from:** https://www.kaggle.com/datasets/carolzhangdc/imdb-5000-movie-dataset
 
 **Target:**
 ```
-is_good = 1 if rating >= 7 else 0 s
+is_good = True if IMDB rating >= 7 else False
 ```
 
 ## Features
-- **Numerical:** `budget`, `runtime`, `box_office`, `release_year`, etc.
-- **Categorical:** `genre`, `director`, `cast`, `language`, `country`
+- **Numerical:** `budget`, `gross`, `duration`, `num_critic_for_reviews`, `num_user_for_reviews`, `num_voted_users`, `title_year`
+- **Categorical:** `color`, `genres`, `language`, `country`, `content_rating`
 
-Feature engineering should include sensible encoding for categorical fields, handling missing values, and scaling for numeric features.
+If you are interested in feature enginnering look at `src/preprocessing.py` and in `notebooks/preprocessing.ipynb`
 
 ## Modeling & Evaluation
-- **Candidate models:** Logistic Regression, Random Forest, XGBoost
-- **Evaluation metrics:** Accuracy, F1-score (report both to balance precision/recall trade-offs)
-
-Typical workflow:
-1. Split data into train/validation/test (stratify on `is_good`).
-2. Preprocess features (imputation, encoding, scaling).
-3. Train baseline (Logistic Regression), then tree-based models.
-4. Evaluate on validation set and report final metrics on the test set.
+- **Model:** Random Forest Classifier
+- **Evaluation metrics:** Accuracy (~0.84)
 
 ## Deployment
 - Served via `FastAPI`.
@@ -47,30 +51,58 @@ Typical workflow:
 ## Quickstart
 These are example commands — adapt paths/environment as needed.
 
-Prerequisites:
-- Python 3.12+ (recommended)
-- `pip`
-- `docker` (for containerized deployment)
+```bash
+pip install uv
+uv install
+```
 
-Install dependencies (if `requirements.txt` exists):
+Alternatively, using pip:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run training script (example):
+Run the FastAPI app locally with uv:
+
 ```bash
-python train.py --data data/imdb_metadata.csv --output models/model.pkl
+uv run src/predict.py
 ```
 
-Run the API locally (example):
+Alternatively, run with Python:
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python src/predict.py 
 ```
 
 Build and run with Docker (example):
+
 ```bash
-docker build -t movie-quality-api .
-docker run -p 8000:8000 movie-quality-api
+docker build -t good_movie .
+docker run -it --rm -p 8000:9696 good_movie
+```
+Dockerized app 
+
+You can test app on following link: 
+http://localhost:8000/predict
+or manually on  http://127.0.0.1:8000/docs#/
+Example of testing snippet:
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/predict' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '  {
+    "budget": 237000000,
+    "gross": 760505847,
+    "duration": 178,
+    "num_critic_for_reviews": 723,
+    "num_user_for_reviews": 3054,
+    "num_voted_users": 886204,
+    "title_year": 2009,
+    "color": true,
+    "genres": "Action|Adventure|Fantasy|Sci-Fi",
+    "language": "English",
+    "country": "USA",
+    "content_rating": "PG-13"
+  }'
 ```
